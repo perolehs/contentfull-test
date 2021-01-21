@@ -76,7 +76,7 @@ function parseDataToContentProduct(rawData) {
 
 async function getImagesId(enviroment, data) {
     for await (let el of data) {
-        el["imageId"] = await createAsset(enviroment, data);
+        el["imageId"] = await createAsset(enviroment, el);
     }
     return data;
 }
@@ -85,10 +85,11 @@ async function setEntry() {
     try {
         let res = await client.getSpace(env.contenful.space.id);
         let envivoment = await res.getEnvironment('master');
+
         let data = await requestData();
         let newData = await getImagesId(envivoment, data);
         let parseData = parseDataToContentProduct(newData);
-        // console.log(JSON.stringify(parseData));
+        console.log(JSON.stringify(parseData));
 
         for (let el of parseData) {
             await envivoment.createEntry('product', el)
@@ -104,6 +105,8 @@ async function getEntrys() {
     let entries = await envivoment.getEntries();
     console.log(JSON.stringify(entries.items[0].fields));
 }
+
+
 
 // getEntrys();
 setEntry();
