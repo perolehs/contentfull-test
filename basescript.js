@@ -5,16 +5,18 @@ const tools = require('./tools.js')
 
 const client = contentful.createClient({
     accessToken: env.contenful.contentDeliveryKey1,
+    
 })
 
 function requestData() {
     return new Promise((resolve, reject) => {
         request('https://fakestoreapi.com/products/', { json: true }, (err, res) => {
-            if (err) { reject(error) }
+            if (err) { reject(err) }
             resolve(res.body);
         });
     })
 }
+
 async function createAsset(enviroment, data) {
     let name = tools.randomString(10)
     let asset = await enviroment.createAsset({
@@ -34,9 +36,8 @@ async function createAsset(enviroment, data) {
             }
         }
     })
-    console.log(asset)
-    if (asset.sys.id) return asset.sys.id;
-    return null
+    // console.log(asset)
+    return asset
 }
 
 function parseDataToContentProduct(rawData) {
@@ -75,8 +76,11 @@ function parseDataToContentProduct(rawData) {
 }
 
 async function getImagesId(enviroment, data) {
-    for await (let el of data) {
-        el["imageId"] = await createAsset(enviroment, el);
+    for (let el of data) {
+        let asset = await createAsset(enviroment, el);
+        el["imageId"] = asset.sys.id;
+        let processedAsset = await asset.processForAllLocales(); // !!
+        await processedAsset.publish();
     }
     return data;
 }
@@ -89,11 +93,13 @@ async function setEntry() {
         let data = await requestData();
         let newData = await getImagesId(envivoment, data);
         let parseData = parseDataToContentProduct(newData);
-        console.log(JSON.stringify(parseData));
+        // console.log(JSON.stringify(parseData));
 
         for (let el of parseData) {
-            await envivoment.createEntry('product', el)
+            await (await envivoment.createEntry('product', el)).publish();
         }
+
+
     } catch (error) {
         console.log(error)
     }
@@ -104,8 +110,8 @@ async function getEntrys() {
     let envivoment = await res.getEnvironment('master');
     let entries = await envivoment.getEntries();
     console.log(JSON.stringify(entries.items[0].fields));
-}
 
+}
 
 
 // getEntrys();
